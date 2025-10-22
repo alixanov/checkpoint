@@ -4,18 +4,14 @@ import {
   Typography,
   Button,
   Input,
-  Paper,
-  List,
-  ListItem,
-  ListItemText,
+  Card,
+  CardContent,
+  Grid,
+  Chip,
   CircularProgress,
   Fade,
   ListItemIcon,
   TextField,
-  Grid,
-  Card,
-  CardContent,
-  Chip,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
@@ -115,9 +111,9 @@ const InfoCard = styled(Card)(({ variant }) => {
         };
     }
   };
-  
+
   const colorScheme = getColors();
-  
+
   return {
     backgroundColor: colorScheme.bg,
     borderRadius: '12px',
@@ -129,7 +125,7 @@ const InfoCard = styled(Card)(({ variant }) => {
       boxShadow: `0 8px 20px ${colorScheme.border}40`,
       perspective: '1000px',
     },
-    height: '100%', // Ensure cards are uniform in grid
+    height: '100%',
   };
 });
 
@@ -229,6 +225,7 @@ const requiredKeywords = [
   'FOYDANILGAN ADABIYOTLAR',
   'ILOVALAR',
   'XULOSA',
+  'TEXNIKA VA TEXNOLOGIYALARNI TAKOMILLASHTIRISH MAQSADIDA O‘TKAZILGAN TADQIQOTLAR TAHLILI',
 ];
 
 const Main = () => {
@@ -277,6 +274,30 @@ const Main = () => {
     return words.join(' ');
   };
 
+  // Fuzzy matching for keywords
+  const fuzzyMatchKeyword = (text, keyword) => {
+    const textLower = text.toLowerCase();
+    const keywordLower = keyword.toLowerCase();
+
+    // Exact match
+    if (textLower.includes(keywordLower)) {
+      return true;
+    }
+
+    // Partial match: check if 80% of keyword words are present
+    const keywordWords = keywordLower.split(/\s+/).filter(word => word.length > 0);
+    const requiredMatches = Math.ceil(keywordWords.length * 0.8); // 80% of words
+    let matchedWords = 0;
+
+    for (const word of keywordWords) {
+      if (textLower.includes(word)) {
+        matchedWords++;
+      }
+    }
+
+    return matchedWords >= requiredMatches;
+  };
+
   // Handle file selection
   const handleFileChange = async (event) => {
     try {
@@ -321,7 +342,7 @@ const Main = () => {
       const missingKeywords = [];
       const foundKeywords = [];
       requiredKeywords.forEach((keyword) => {
-        if (dissertationText.includes(keyword)) {
+        if (fuzzyMatchKeyword(dissertationText, keyword)) {
           foundKeywords.push(keyword);
         } else {
           missingKeywords.push(keyword);
@@ -329,12 +350,14 @@ const Main = () => {
       });
 
       let conclusionText = '';
-      if (foundKeywords.includes('XULOSA') && dissertationText.includes('UMUMIY XULOSA VA TAVSIYALAR')) {
-        const umumiyXulosaIndex = dissertationText.indexOf('UMUMIY XULOSA VA TAVSIYALAR');
-        const textAfterUmumiyXulosa = dissertationText
-          .slice(umumiyXulosaIndex + 'UMUMIY XULOSA VA TAVSIYALAR'.length)
-          .trim();
-        conclusionText = limitTo50Words(textAfterUmumiyXulosa);
+      if (foundKeywords.includes('XULOSA') && fuzzyMatchKeyword(dissertationText, 'UMUMIY XULOSA VA TAVSIYALAR')) {
+        const umumiyXulosaIndex = dissertationText.toLowerCase().indexOf('umumiy xulosa va tavsiyalar');
+        if (umumiyXulosaIndex !== -1) {
+          const textAfterUmumiyXulosa = dissertationText
+            .slice(umumiyXulosaIndex + 'UMUMIY XULOSA VA TAVSIYALAR'.length)
+            .trim();
+          conclusionText = limitTo50Words(textAfterUmumiyXulosa);
+        }
       }
 
       const wordCount = dissertationText.split(/\s+/).filter((word) => word.length > 0).length;
@@ -576,7 +599,7 @@ const Main = () => {
                       ? 'Ҳурматли докторант, илмий иш бўйича барча мезонлар мавжуд!'
                       : 'Ҳурматли докторант, сизда қуйидаги мезон(лар) мавжуд эмас. Илтимос, уларни қўшинг ва қайта текширинг.'}
                   </Typography>
-                  
+
                   {result.missingKeywords.length > 0 && (
                     <Box mt={2}>
                       <Grid container spacing={1}>
